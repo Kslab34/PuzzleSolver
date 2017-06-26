@@ -1,0 +1,240 @@
+package a04;
+
+import edu.princeton.cs.algs4.Stack;
+
+/**
+ * @author Chris Schlenker, Kelby Schulz
+ * 
+ *         Board class for puzzle
+ */
+public class Board {
+
+	private int[][] blocks;
+
+	/**
+	 * @param blocks
+	 *            int[][] array to initialize board from
+	 */
+	public Board(int[][] blocks) {
+		this.blocks = new int[blocks.length][blocks.length];
+
+		for (int r = 0; r < size(); r++) {
+			for (int c = 0; c < size(); c++) {
+				this.blocks[r][c] = blocks[r][c];
+			}
+		}
+	}
+
+	/**
+	 * @return size of the board (length, not area)
+	 */
+	public int size() {
+		return blocks.length;
+	}
+
+	/**
+	 * Hamming method
+	 * 
+	 * @return how many blocks are out of place
+	 */
+	public int hamming() {
+		int hamming = 0;
+		for (int r = 0; r < size(); r++) {
+			for (int c = 0; c < size(); c++) {
+				if (blocks[r][c] != 0 && blocks[r][c] != r * size() + c + 1)
+					hamming++;
+			}
+		}
+		return hamming;
+	}
+
+	/**
+	 * Manhattan method
+	 * 
+	 * @return the total distance by which blocks are displaced
+	 */
+	public int manhattan() {
+		int manhattan = 0;
+		for (int r = 0; r < size(); r++) {
+			for (int c = 0; c < size(); c++) {
+				if (blocks[r][c] != 0) {
+					int cR = (blocks[r][c] - 1) / size();
+					int cC = (blocks[r][c] - 1) % size();
+					manhattan += Math.abs(cR - r) + Math.abs(cC - c);
+				}
+			}
+		}
+		return manhattan;
+	}
+
+	/**
+	 * is board goal?
+	 * 
+	 * @return true if board is complete, false if otherwise
+	 */
+	public boolean isGoal() {
+		return hamming() == 0;
+	}
+
+	/**
+	 * is board solvable?
+	 * 
+	 * @return true if board is solvable, false if otherwise
+	 */
+	public boolean isSolvable() {
+		if (size() % 2 == 0) {
+			int zeroRow = 0;
+			for (int r = 0; r < size(); r++) {
+				for (int c = 0; c < size(); c++) {
+					if (blocks[r][c] == 0) {
+						zeroRow = r;
+						break;
+					}
+				}
+			}
+
+			if ((inversions() + zeroRow) % 2 == 0)
+				return false;
+			return true;
+		} else {
+			// odd board
+			if (inversions() % 2 == 0) // even inversions
+				return true;
+			return false;
+		}
+	}
+
+	/**
+	 * find the number of inversions on the board
+	 * 
+	 * @return number of inversions on the board
+	 */
+	private int inversions() {
+		int[] linear = new int[size() * size() - 1];
+		int passedZero = 0;
+		for (int r = 0; r < size(); r++) {
+			for (int c = 0; c < size(); c++) {
+				if (blocks[r][c] == 0) {
+					passedZero = 1;
+					continue;
+				}
+				linear[c + r * size() - passedZero] = blocks[r][c];
+			}
+		}
+
+		int inversions = 0;
+		for (int i = 0; i < linear.length - 1; i++) {
+			for (int j = i + 1; j < linear.length; j++) {
+				if (linear[i] > linear[j])
+					inversions++;
+			}
+		}
+		return inversions;
+	}
+
+	/**
+	 * is one board equivalent to another?
+	 * 
+	 * @return true if that is equivalent to this, false if not.
+	 */
+	public boolean equals(Object that) {
+		if (this == that)
+			return true;
+		if (that == null || !(that instanceof Board))
+			return false;
+
+		for (int r = 0; r < size(); r++) {
+			for (int c = 0; c < size(); c++) {
+				if (this.blocks[r][c] != ((Board) that).blocks[r][c])
+					return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * iterable of possible board moves
+	 * 
+	 * @return all possible board changes (2-4)
+	 */
+	public Iterable<Board> neighbors() {
+		Stack<Board> stack = new Stack<Board>();
+		if (!isGoal()) {
+			int zeroC = 0;
+			int zeroR = 0;
+
+			for (int r = 0; r < size(); r++) {
+				for (int c = 0; c < size(); c++) {
+					if (blocks[r][c] == 0) {
+						zeroC = c;
+						zeroR = r;
+						break;
+					}
+				}
+			}
+
+			if (zeroR - 1 >= 0) // check up neighbor
+			{
+				stack.push(swap(zeroR, zeroC, zeroR - 1, zeroC));
+			}
+			if (zeroR + 1 <= size() - 1) // check down neighbor
+			{
+				stack.push(swap(zeroR, zeroC, zeroR + 1, zeroC));
+			}
+			if (zeroC - 1 >= 0) { // check left neighbor
+				stack.push(swap(zeroR, zeroC, zeroR, zeroC - 1));
+			}
+			if (zeroC + 1 <= size() - 1) // check right neighbor
+			{
+				stack.push(swap(zeroR, zeroC, zeroR, zeroC + 1));
+			}
+		}
+
+		return stack;
+	}
+
+	/**
+	 * create a new board by swapping elements in this board
+	 * 
+	 * @param row0
+	 * @param col0
+	 * @param row1
+	 * @param col1
+	 * @return new board with (row0, col0) swapped with (row1, col1)
+	 */
+	private Board swap(int row0, int col0, int row1, int col1) {
+		Board board = new Board(blocks);
+		board.blocks[row0][col0] = blocks[row1][col1];
+		board.blocks[row1][col1] = blocks[row0][col0];
+
+		return board;
+	}
+
+	/**
+	 * string formatted based on this board
+	 * 
+	 * @return string iteration of this board.
+	 */
+	public String toString() {
+		StringBuilder s = new StringBuilder();
+		s.append(size() + "\n");
+		for (int i = 0; i < size(); i++) {
+			for (int j = 0; j < size(); j++) {
+				s.append(String.format("%2d ", blocks[i][j]));
+			}
+			s.append("\n");
+		}
+		return s.toString();
+	}
+
+	/**
+	 * testing
+	 * 
+	 * @param args
+	 *            command line arguments
+	 */
+	public static void main(String[] args) {
+
+	}
+}
