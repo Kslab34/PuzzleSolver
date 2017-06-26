@@ -1,0 +1,150 @@
+package a04;
+
+import edu.princeton.cs.algs4.In;
+import edu.princeton.cs.algs4.MinPQ;
+import edu.princeton.cs.algs4.Stack;
+import edu.princeton.cs.algs4.StdOut;
+
+/**
+ * 
+ * @author Chris Schlenker, Kelby Schulz
+ *
+ */
+public class Solver {
+
+	/**
+	 * Search node class for use with A* algorithm
+	 * 
+	 * @author Chris Schlenker, Kelby Schulz
+	 */
+	private class SearchNode implements Comparable<SearchNode> {
+
+		private SearchNode previous;
+		private Board board;
+		private int moves;
+
+		/**
+		 * construct initial search node
+		 * 
+		 * @param board
+		 */
+		public SearchNode(Board board) {
+			this.board = board;
+		}
+
+		/**
+		 * construct subsequent search node with a previous node and board
+		 * 
+		 * @param board
+		 * @param previous
+		 */
+		public SearchNode(Board board, SearchNode previous) {
+			this.board = board;
+			this.previous = previous;
+			this.moves = previous.moves + 1;
+		}
+
+		/**
+		 * comparator for use with MinPQ
+		 */
+		public int compareTo(SearchNode node) {
+			return (this.board.manhattan() - node.board.manhattan()) + (this.moves - node.moves);
+		}
+	}
+
+	private SearchNode lastNode;
+
+	/**
+	 * Solver constructor. solve a given board
+	 * 
+	 * @param initial
+	 *            board to solve
+	 */
+	public Solver(Board initial) { // find solution to inital baord using A*
+		if (initial == null)
+			throw new NullPointerException("Board cannot be null.");
+		if (!initial.isSolvable())
+			throw new IllegalArgumentException("Board is not solvable.");
+
+		MinPQ<SearchNode> nodes = new MinPQ<SearchNode>();
+		nodes.insert(new SearchNode(initial));
+
+		while (true) {
+			lastNode = next(nodes);
+			if (lastNode != null)
+				break;
+		}
+	}
+
+	/**
+	 * @param nodes
+	 * @return null if not yet completed, final SearchNode if completed
+	 */
+	private SearchNode next(MinPQ<SearchNode> nodes) {
+		SearchNode best = nodes.delMin();
+		if (best.board.isGoal())
+			return best;
+
+		for (Board neighbor : best.board.neighbors()) {
+			if (best.previous == null || !neighbor.equals(best.previous.board)) {
+				nodes.insert(new SearchNode(neighbor, best));
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * min num of moves needed to solve
+	 * 
+	 * @return minimum number of moves needed to solve
+	 */
+	public int moves() { // min number of moves to solve
+		return lastNode.moves;
+	}
+
+	/**
+	 * Iterable<Board> solution
+	 * 
+	 * @return an Iterable<Board> containing each move to the solution
+	 */
+	public Iterable<Board> solution() { // sequence of boards in a shortest solution
+		Stack<Board> solution = new Stack<Board>();
+		SearchNode current = lastNode;
+		while (current != null) {
+			solution.push(current.board);
+			current = current.previous;
+		}
+
+		return solution;
+	}
+
+	/**
+	 * 
+	 * @param args
+	 *            command line arguments
+	 */
+	public static void main(String[] args) { // solve a slider puzzle
+		// create initial board from file
+		In in = new In(args[0]);
+		int N = in.readInt();
+		int[][] blocks = new int[N][N];
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < N; j++)
+				blocks[i][j] = in.readInt();
+		Board initial = new Board(blocks);
+
+		// check if puzzle is solvable; if so, solve it and output solution
+		if (initial.isSolvable()) {
+			Solver solver = new Solver(initial);
+			StdOut.println("Minimum number of moves = " + solver.moves());
+			for (Board board : solver.solution())
+				StdOut.println(board);
+		}
+
+		// if not, report unsolvable
+		else {
+			StdOut.println("Unsolvable puzzle");
+		}
+	}
+}
